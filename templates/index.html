@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW"
+            crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-latest.min.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static',filename='bootstrap-icons/font/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static',filename='pagination.css') }}">
+    <script src="{{ url_for('static',filename='pagination.min.js') }}"></script>
+
+    <title>Align words</title>
+</head>
+<body>
+<div class="container">
+    <h1 class="m-5">Pliki</h1>
+    <a href="/highlight">Podświetlanie</a>
+    <div class="card">
+        <ul id="container" class="m-5"></ul>
+        <div id="pagination"></div>
+    </div>
+</div>
+<script>
+    $('#pagination').pagination({
+        dataSource: '/list',
+        locator: '.',
+        pageSize: 20,
+        callback: function (data, pagination) {
+            $('#container').empty();
+            $.each(data, function (i, e) {
+                $('#container').append($('<li><a href="/view/' + e + '">' + e + '</a></li>'))
+            });
+        }
+    });
+</script>
+
+</body>
+</html>
