@@ -1,0 +1,23 @@
+version: '3.3'
+services:
+  db:
+    image: "mongo"
+    volumes:
+      - dbdata:/data/db
+      - dbconfig:/data/configdb
+  www:
+    ports:
+      - "80:80"
+    volumes:
+      - ./data:/data
+    environment:
+      - DB_HOST=db
+      - DB_PORT=27017
+    depends_on:
+      - "db"
+    image: "word-align"
+volumes:
+  dbdata:
+    external: true
+  dbconfig:
+~

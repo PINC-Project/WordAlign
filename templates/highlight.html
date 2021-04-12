@@ -15,32 +15,70 @@
     <script src="{{ url_for('static',filename='pagination.min.js') }}"></script>
 
     <title>Align words</title>
+
+    <style>
+        hw {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
+
+<div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                Przetwarzam podświetlanie... Proszę czekać!
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="container">
     <h1 class="m-5">Podświetlane wyrazy</h1>
-    <a href="/">Główna strona</a>
-    <form method="post" action="highlight">
+    <a href="/">Powrót</a>
+    <form method="post" action="/highlight">
         <div class="card p-3">
-            <input type="submit" class="btn btn-success form-control">Ustaw</input>
-            <textarea id="wordlist" name="wordlist" style="height: 500px"></textarea>
+            <input type="submit" class="btn btn-success form-control" value="Ustaw" data-bs-toggle="modal"
+                   data-bs-target="#loadingModal">
+            <div class="row mt-3">
+                <p class="col text-center">EN</p>
+                <p class="col text-center">PL</p>
+            </div>
+            <div class="row">
+                <textarea id="wordlist_en" name="wordlist_en" class="col m-2" rows="20">{{ wordlist_en }}</textarea>
+                <textarea id="wordlist_pl" name="wordlist_pl" class="col m-2" rows="20">{{ wordlist_pl }}</textarea>
+            </div>
         </div>
     </form>
+    <div class="card p-3 mt-2">
+        <div id="container"></div>
+        <div id="pagination"></div>
+    </div>
 </div>
-{#<script>#}
-{#    let wordlist = localStorage.getItem('wordlist');#}
-{#    if (wordlist) {#}
-{#        $('#wordlist').val(wordlist);#}
-{#    }#}
-{#    $('#setbutton').on('click', function () {#}
-{#        let words = $('#wordlist').val().split('\n');#}
-{#        for (let i = 0; i < words.length; i++) {#}
-{#            words[i] = words[i].toLowerCase().replaceAll(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').trim();#}
-{#        }#}
-{#        $('#wordlist').val(words.join('\n'));#}
-{#        localStorage.setItem('wordlist', $('#wordlist').val());#}
-{#    });#}
-{#</script>#}
-
+<script>
+    let data ={{ texts|tojson }};
+    $('#pagination').pagination({
+        dataSource: data,
+        pageSize: 20,
+        showGoInput: true,
+        showGoButton: true,
+        callback: function (data, pagination) {
+            $('#container').empty();
+            $.each(data, function (i, e) {
+                let p = $('#container').append($('<p></p>'));
+                e.forEach(function (e, i) {
+                    if (e[1]) {
+                        p.append($('<hw>' + e[0] + ' </hw>'));
+                    } else {
+                        p.append(e[0] + ' ');
+                    }
+                });
+            });
+        }
+    });
+</script>
 </body>
 </html>

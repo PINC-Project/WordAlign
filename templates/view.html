@@ -33,6 +33,12 @@
             color: red;
         }
 
+        .edit {
+            color: hotpink;
+            font-style: italic;
+            font-weight: bold;
+        }
+
         td {
             width: 3em;
             text-align: center;
@@ -45,236 +51,218 @@
 
 </head>
 <body>
-<div class="container">
-    <h1 class="m-5">{{ name }}</h1>
-    <a href="/">Powrót</a>
-    <a href="/highlight" class="float-end">Podświetlanie</a>
-</div>
-<div class="container mb-5 p-5 card">
-    <p>Zdanie:</p>
-    <div id="sentences"></div>
-    <p class="mt-3">Metody:</p>
-    <div id="methods"></div>
-</div>
-<div class="position-relative">
-    <img id="icon" src="{{ url_for('static',filename='unicorn.jpg') }}"
-         class="position-absolute start-50 top-50 translate-middle d-none">
-    <div id="container">
-        <div class="container p-5">Wybierz zdanie i metodę...</div>
-    </div>
-</div>
-<div class="container">
-    <button class="btn btn-success form-control mt-5" id="save">Save</button>
-</div>
 <script>
-    let flip = '{{ name }}'.startsWith('PL');
-    let text_to, text_from;
-    let from = [];
-    let to = [];
-    let ali = [];
-    let from_num = 0;
-    let to_num = 0;
-
-    let hiwords = localStorage.getItem('wordlist');
-    if (hiwords) {
-        hiwords = new Set(hiwords.split('\n'));
-    } else {
-        hiwords = new Set();
-    }
-
-   let ali_counter=0;
-
-    function refreshAli() {
-        let method = $('input[name="method"]:checked')
-        if (!method[0])
-            return;
-        method = $('label[for="' + method[0].id + '"]').text();
-        let i = $('input[name="sentence"]:checked');
-        if (!i[0])
-            return;
-        i = Number($('label[for="' + i[0].id + '"]').text());
-
-        if (i >= 0 && method.length > 0) {
-            $('#container').empty();
-	    ali_counter+=1;
-	    let local_counter=ali_counter;
-            $.getJSON('/ali/{{ name }}/' + method, function (data) {
-		if(ali_counter>local_counter)
-		    return;
-                load(text_from[i], text_to[i], data[i]);
-            }).fail(function () {
-                load(text_from[i], text_to[i], []);
-            });
-        }
-    }
-
-    $('#save').on('click', function () {
-        $('#icon').removeClass('d-none');
-        $('#icon').animate({
-            width: '200%',
-            height: '200%',
-            opacity: 0.2
-        }, 'slow', function () {
-            $(this).removeAttr('style');
-            $(this).addClass('d-none');
-        });
-        let i = $('input[name="sentence"]:checked');
-        if (!i[0])
-            return;
-        si = Number($('label[for="' + i[0].id + '"]').text());
-        let data = [];
-
-        function send_data(data) {
-            for (let i = 0; i < ali.length; i++)
-                for (let j = 0; j < ali[i].length; j++)
-                    if (ali[i][j].prop('checked')) {
-                        data[si].push([j, i]);
+    function hover(word, top) {
+        let table = word.parentNode.parentNode.parentNode.getElementsByTagName('tbody')[0];
+        if (top) {
+            let words = word.parentNode.getElementsByClassName('word');
+            let hover_word = -1;
+            for (let i = 0; i < words.length; i++) {
+                if (words[i] === word) {
+                    words[i].classList.add('highlight');
+                    hover_word = i;
+                } else {
+                    words[i].classList.remove('highlight');
+                }
+            }
+            if (hover_word < 0)
+                return;
+            let rows = table.getElementsByTagName('tr');
+            for (let r = 0; r < rows.length; r++) {
+                let cbs = rows[r].getElementsByTagName('input');
+                if (cbs[hover_word].checked) {
+                    rows[r].getElementsByClassName('word')[0].classList.add('highlight');
+                } else {
+                    rows[r].getElementsByClassName('word')[0].classList.remove('highlight');
+                }
+            }
+        } else {
+            let rows = table.getElementsByTagName('tr');
+            let topwords = word.parentNode.parentNode.parentNode.getElementsByTagName('thead')[0].getElementsByClassName('word');
+            for (let r = 0; r < rows.length; r++) {
+                let w = rows[r].getElementsByClassName('word')[0];
+                if (w === word) {
+                    w.classList.add('highlight');
+                    let cbs = rows[r].getElementsByTagName('input');
+                    for (let i = 0; i < cbs.length; i++) {
+                        if (cbs[i].checked) {
+                            topwords[i].classList.add('highlight');
+                        } else {
+                            topwords[i].classList.remove('highlight');
+                        }
                     }
-            $.ajax({
-                type: 'POST',
-                url: '/save/{{ name }}',
-                data: JSON.stringify(data),
-                contentType: "application/json; charset=utf-8",
-                dataType: "json"
-            });
-        }
-
-        $.getJSON('/ali/{{ name }}/Saved', function (data) {
-            data[si] = [];
-            send_data(data);
-        }).fail(function () {
-            let data = [];
-            $.each(text_to, function (e) {
-                data.push([])
-            });
-            console.log(data);
-            send_data(data);
-        });
-    })
-    ;
-
-    $.getJSON('/text/{{ name }}', function (data) {
-        if (flip) {
-            text_from = data['pl']
-            text_to = data['en'];
-        } else {
-            text_from = data['en']
-            text_to = data['pl'];
-        }
-        for (let i = 0; i < text_from.length; i++) {
-            let sb = $('<input type="radio" class="btn-check sc" name="sentence" id="sent' + i + '">' +
-                '<label class="btn btn-outline-primary m-1" for="sent' + i + '">' + i + '</label>');
-            sb.on('click', refreshAli);
-            $('#sentences').append(sb);
-        }
-        $.getJSON('/methods/{{ name }}', function (data) {
-            let mb = $('<input type="radio" class="btn-check mc" name="method" id="method_saved" checked>' +
-                '<label class="btn btn-outline-success m-1" for="method_saved">Saved</label>');
-            mb.on('click', refreshAli);
-            $('#methods').append(mb);
-            $.each(data, function (i, method) {
-                if (method === 'Saved')
-                    return;
-                let mb = $('<input type="radio" class="btn-check mc" name="method" id="method' + i + '">' +
-                    '<label class="btn btn-outline-primary m-1" for="method' + i + '">' + method + '</label>');
-                mb.on('click', refreshAli);
-                $('#methods').append(mb);
-            });
-        });
-    });
-
-    function hover(from_to, idx) {
-        if (from_to) {
-            for (let i = 0; i < from_num; i++)
-                from[i].removeClass('highlight');
-            from[idx].addClass('highlight');
-            for (let i = 0; i < to_num; i++)
-                if (ali[i][idx].prop('checked')) {
-                    to[i].addClass('highlight');
                 } else {
-                    to[i].removeClass('highlight');
+                    w.classList.remove('highlight');
                 }
-        } else {
-            for (let i = 0; i < to_num; i++)
-                to[i].removeClass('highlight');
-            to[idx].addClass('highlight');
-            for (let i = 0; i < from_num; i++)
-                if (ali[idx][i].prop('checked')) {
-                    from[i].addClass('highlight');
-                } else {
-                    from[i].removeClass('highlight');
-                }
+            }
         }
+
     }
 
-    function load(from_text, to_text, ali_list) {
-        $('#container').empty();
-        let table = $('<table>');
-        $('#container').append(table);
-        let row = $('<tr>');
-        table.append(row);
-        from = [];
-        ali = [];
-        let hicol = [];
-        from_text.trim().split(' ').forEach(function (el, i) {
-            let word = $('<td class="word" id="f' + i + '">' + el + '</td>');
-            let lel = el.toLowerCase().replaceAll(/\W/g, '').trim();
-            if (hiwords.has(lel)) {
-                word.addClass('wordhi');
-                hicol.push(true);
-            } else {
-                hicol.push(false);
-            }
-            word.on('mouseenter', function () {
-                hover(true, i);
-            });
-            row.append(word);
-            from.push(word);
+    function save(sent_idx) {
+        $('#saved').addClass('d-none');
+        $('#saving').removeClass('d-none');
+        let table = document.getElementById('sent' + sent_idx).getElementsByTagName('tbody')[0];
+        let rows = table.getElementsByTagName('tr');
+        let ali = new Array();
+        for (let r = 0; r < rows.length; r++) {
+            let cols = rows[r].getElementsByTagName('input');
+            for (let c = 0; c < cols.length; c++)
+                if (cols[c].checked)
+                    ali.push([c, r])
+        }
+        $.post('/save/{{ file.name }}/' + sent_idx, {ali: JSON.stringify(ali)}).done(function () {
+            $('#saved').removeClass('d-none');
+            $('#saving').addClass('d-none');
+            $('#modified' + sent_idx).removeClass('d-none');
         });
+    }
 
-        from_num = from.length;
-        to = [];
-        to_text.trim().split(' ').forEach(function (el, i) {
-            let lel = el.toLowerCase().replaceAll(/\W/g, '').trim();
-            let hirow = hiwords.has(lel);
-            let row = $('<tr>');
-            table.append(row);
-            let ali_row = [];
-            for (let i = 0; i < from_num; i++) {
-                let ali_cell = $('<input type="checkbox">');
-                let c = $('<td>');
-                if (hirow || hicol[i])
-                    c.addClass('hicell');
-                c.append(ali_cell);
-                row.append(c);
-                ali_row.push(ali_cell);
-            }
-            ali.push(ali_row);
-            let word = $('<span class="word" id="t' + i + '">' + el + '</span>');
-            if (hirow)
-                word.addClass('wordhi');
-            word.on('mouseenter', function () {
-                hover(true, i);
-            });
-            word.on('mouseenter', function () {
-                hover(false, i);
-            });
-            row.append(word);
-            to.push(word);
+    let alignments = {{ alignments|tojson }};
+
+    function reload(sent_idx) {
+        if (!confirm('Are you sure?'))
+            return;
+        $('#saved').addClass('d-none');
+        $('#saving').removeClass('d-none');
+        let table = document.getElementById('sent' + sent_idx).getElementsByTagName('tbody')[0];
+        let rows = Array.from(table.getElementsByTagName('tr'));
+
+        Array.from(table.getElementsByTagName('input')).forEach(el => el.checked = false);
+
+        for (let ali of alignments[sent_idx]) {
+            let r = ali[1], c = ali[0];
+            let cols = rows[r].getElementsByTagName('input');
+            cols[c].checked = true;
+        }
+        $.post('/unsave/{{ file.name }}/' + sent_idx).done(function () {
+            $('#saved').removeClass('d-none');
+            $('#saving').addClass('d-none');
+            $('#modified' + sent_idx).addClass('d-none');
         });
-        to_num = to.length;
-        ali_list.forEach(function (el, i) {
-            let fi, ti;
-            if (flip) {
-                fi = el[1];
-                ti = el[0];
-            } else {
-                fi = el[0];
-                ti = el[1];
-            }
-            ali[ti][fi].prop('checked', true);
-        });
+    }
+
+    function edit(lang, sent_idx, word_idx) {
+        let word = prompt('Określ status:');
+        if (word != null) {
+            $('#saved').addClass('d-none');
+            $('#saving').removeClass('d-none');
+            $.post('/edit/{{ file.name }}/' + lang + '/' + sent_idx + '/' + word_idx, {'word': word}).done(function () {
+                $('#c-' + lang + '-' + sent_idx + '-' + word_idx).text(word);
+                $('#saved').removeClass('d-none');
+                $('#saving').addClass('d-none');
+            });
+        }
     }
 </script>
+<div class="m-3">
+    <h1 class="m-5">{{ file.name }}
+        <span id="saved" class="fs-5 text-success"><i class="bi bi-check2-circle"></i>Saved!</span>
+        <span id="saving" class="fs-5 text-warning d-none"><i class="bi bi-cloud-arrow-up-fill"></i>Saving...</span>
+    </h1>
+    <a href="/">Powrót</a>
+    <div class="accordion" id="accordionMain">
+        {% for phrase in file.phrases %}
+            {% set sent_idx = loop.index0 %}
+            {% set lang_from = file.direction[0] %}
+            {% set text_from = phrase.words[lang_from] %}
+            {% set lang_to = file.direction[1] %}
+            {% set text_to = phrase.words[lang_to] %}
+            {% set alignment = phrase.alignment %}
+            {% if phrase.saved %}
+                {% set alignment = phrase.saved %}
+                {% set modified = '' %}
+            {% else %}
+                {% set modified = 'd-none' %}
+            {% endif %}
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="heading{{ loop.index }}">
+                    <button class="accordion-button collapsed" data-bs-toggle="collapse"
+                            data-bs-target="#collapse{{ loop.index }}" aria-expanded="false"
+                            aria-controls="collapse{{ loop.index }}">
+                        <span class="me-5">#{{ loop.index }}</span>
+                        <i class="bi bi-hand-index {{ modified }}" id="modified{{ loop.index0 }}"></i>
+                    </button>
+                </h2>
+                <div class="accordion-collapse collapse" id="collapse{{ loop.index }}" data-bs-parent="#accordionMain"
+                     aria-labelledby="heading{{ loop.index }}">
+                    <div class="accordion-body">
+                        <button class="btn btn-danger" onclick="reload({{ sent_idx }})">
+                            <i class="bi bi-arrow-clockwise"></i> Automatic
+                        </button>
+                        <button class="btn btn-success" onclick="save({{ sent_idx }})">
+                            <i class="bi bi-cloud-arrow-up"></i> Save
+                        </button>
+                        <table id="sent{{ sent_idx }}">
+                            <thead>
+                            <tr>
+                                {% for word in text_from %}
+                                    {% if word.corr %}
+                                        <td id="c-{{ lang_from }}-{{ sent_idx }}-{{ loop.index0 }}"
+                                            class="edit">{{ word.corr }}</td>
+                                    {% else %}
+                                        <td id="c-{{ lang_from }}-{{ sent_idx }}-{{ loop.index0 }}" class="edit"></td>
+                                    {% endif %}
+                                {% endfor %}
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                {% for word in text_from %}
+                                    {% if word.hl %}
+                                        {% set whi = 'wordhi hicell' %}
+                                    {% else %}
+                                        {% set whi = '' %}
+                                    {% endif %}
+                                    <td class="word {{ whi }}" onmouseover="hover(this,true)"
+                                        onclick="edit('{{ lang_from }}',{{ sent_idx }},{{ loop.index0 }})">{{ word.orig }}</td>
+                                {% endfor %}
+                                <td></td>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for word in text_to %}
+                                {% set j = loop.index0 %}
+                                <tr>
+                                    {% for i in range(text_from|length) %}
+                                        {% if text_from[i].hl or text_to[j].hl %}
+                                            {% set hi=' class=hicell' %}
+                                        {% else %}
+                                            {% set hi='' %}
+                                        {% endif %}
+
+                                        {% if [i,j] in alignment %}
+                                            {% set chkd='checked' %}
+                                        {% else %}
+                                            {% set chkd='' %}
+                                        {% endif %}
+                                        <td{{ hi }}>
+                                            <input type="checkbox" {{ chkd }} onclick="save({{ sent_idx }})">
+                                        </td>
+                                    {% endfor %}
+                                    {% if word.hl %}
+                                        {% set whi = 'wordhi hicell' %}
+                                    {% else %}
+                                        {% set whi = '' %}
+                                    {% endif %}
+                                    <td class="word {{ whi }}" onmouseover="hover(this,false)"
+                                        onclick="edit('{{ lang_to }}',{{ sent_idx }},{{ loop.index0 }})">{{ word.orig }}</td>
+                                    {% if word.corr %}
+                                        <td id="c-{{ lang_to }}-{{ sent_idx }}-{{ loop.index0 }}"
+                                            class="edit">{{ word.corr }}</td>
+                                    {% else %}
+                                        <td id="c-{{ lang_to }}-{{ sent_idx }}-{{ loop.index0 }}" class="edit"></td>
+                                    {% endif %}
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
 </body>
 </html>

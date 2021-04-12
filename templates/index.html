@@ -13,23 +13,42 @@
     <link rel="stylesheet" href="{{ url_for('static',filename='bootstrap-icons/font/bootstrap-icons.css') }}">
     <link rel="stylesheet" href="{{ url_for('static',filename='pagination.css') }}">
     <script src="{{ url_for('static',filename='pagination.min.js') }}"></script>
+    <script src="{{ url_for('static',filename='cookies.min.js') }}"></script>
+
 
     <title>Align words</title>
 </head>
 <body>
+<script>
+    function set_pagenum(num) {
+        Cookies.set('pagenumber', num);
+        location.reload();
+    }
+</script>
 <div class="container">
-    <h1 class="m-5">Pliki</h1>
+    <h1 class="m-5">Nagrania</h1>
     <a href="/highlight">Podświetlanie</a>
     <div class="card">
         <ul id="container" class="m-5"></ul>
         <div id="pagination"></div>
     </div>
+    <p>
+        Items per page:
+        <a href="#" onclick="set_pagenum(10)">10</a>
+        <a href="#" onclick="set_pagenum(20)">20</a>
+        <a href="#" onclick="set_pagenum(50)">50</a>
+        <a href="#" onclick="set_pagenum(100)">100</a>
+        <a href="#" onclick="set_pagenum(200)">200</a>
+    </p>
 </div>
 <script>
+    let page_num = Cookies.get('pagenumber');
+    if (!page_num)
+        page_num = 20;
+    let data ={{ list|tojson }};
     $('#pagination').pagination({
-        dataSource: '/list',
-        locator: '.',
-        pageSize: 20,
+        dataSource: data,
+        pageSize: page_num,
         callback: function (data, pagination) {
             $('#container').empty();
             $.each(data, function (i, e) {
