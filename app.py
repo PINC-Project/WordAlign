@@ -127,7 +127,7 @@ def export():
         src = file['direction'][0]
         dest = file['direction'][1]
         for sent_num, sent in enumerate(file['phrases']):
-            sheet.write(rn, 1, sent_num)
+            sheet.write(rn, 1, sent_num + 1)
             src_sent = ' '.join([x['orig'] for x in sent['words'][src]])
             sheet.write(rn, 2, src_sent)
             dest_sent = ' '.join([x['orig'] for x in sent['words'][dest]])
@@ -135,17 +135,23 @@ def export():
             for word_num, word in enumerate(sent['words'][src]):
                 if word['hl']:
                     to = []
-                    for f in sent['alignment']:
+
+                    if 'saved' in sent and sent['saved']:
+                        ali = sent['saved']
+                    else:
+                        ali = sent['alignment']
+
+                    for f in ali:
                         if f[0] == word_num:
                             to.append(f[1])
-                    sheet.write(rn, 4, word_num)
+                    sheet.write(rn, 4, word_num + 1)
                     sheet.write(rn, 5, word['orig'])
                     sheet.write(rn, 6, word['corr'])
                     if len(to) == 0:
                         rn += 1
                     for t in to:
                         dest_word = sent['words'][dest][t]
-                        sheet.write(rn, 7, t)
+                        sheet.write(rn, 7, t + 1)
                         sheet.write(rn, 8, dest_word['orig'])
                         sheet.write(rn, 9, dest_word['corr'])
                         rn += 1
