@@ -1,9 +1,9 @@
 import json
 import os
 from pathlib import Path
-from typing import List
 
-from flask import Flask, jsonify, render_template, abort, request
+import xlsxwriter as xlsxwriter
+from flask import Flask, jsonify, render_template, abort, request, send_file
 from flask_pymongo import PyMongo
 
 application = Flask(__name__)
@@ -95,12 +95,63 @@ def unsave(name, sent):
 @application.route('/edit/<name>/<lang>/<int:sent>/<int:word>', methods=['POST'])
 def edit(name, lang, sent, word):
     txt = request.form['word']
-    if len(txt)==0:
-        txt=None
+    if len(txt) == 0:
+        txt = None
 
     mongo.db.files.update_one({'name': name}, {'$set': {f'phrases.{sent}.words.{lang}.{word}.corr': txt}})
 
     return jsonify(success=True)
+
+
+@application.route('/export')
+def export():
+    wb = xlsxwriter.Workbook('/tmp/export.xlsx')
+    fmt_head = wb.add_format()
+    fmt_head.set_bold()
+    fmt_head.set_align('center')
+    sheet = wb.add_worksheet()
+    sheet.write(0, 0, 'File name', fmt_head)
+    sheet.write(0, 1, 'Sent num', fmt_head)
+    sheet.write(0, 2, 'ST', fmt_head)
+    sheet.write(0, 3, 'TT', fmt_head)
+    sheet.write(0, 4, 'ST word num', fmt_head)
+    sheet.write(0, 5, 'ST word', fmt_head)
+    sheet.write(0, 6, 'ST status', fmt_head)
+    sheet.write(0, 7, 'TT word num', fmt_head)
+    sheet.write(0, 8, 'TT word ', fmt_head)
+    sheet.write(0, 9, 'TT status', fmt_head)
+
+    rn = 1
+    for file in sorted(mongo.db.files.find({}), key=lambda x: x['name']):
+        sheet.write(rn, 0, file['name'])
+        src = file['direction'][0]
+        dest = file['direction'][1]
+        for sent_num, sent in enumerate(file['phrases']):
+            sheet.write(rn, 1, sent_num)
+            src_sent = ' '.join([x['orig'] for x in sent['words'][src]])
+            sheet.write(rn, 2, src_sent)
+            dest_sent = ' '.join([x['orig'] for x in sent['words'][dest]])
+            sheet.write(rn, 3, dest_sent)
+            for word_num, word in enumerate(sent['words'][src]):
+                if word['hl']:
+                    to = []
+                    for f in sent['alignment']:
+                        if f[0] == word_num:
+                            to.append(f[1])
+                    sheet.write(rn, 4, word_num)
+                    sheet.write(rn, 5, word['orig'])
+                    sheet.write(rn, 6, word['corr'])
+                    if len(to) == 0:
+                        rn += 1
+                    for t in to:
+                        dest_word = sent['words'][dest][t]
+                        sheet.write(rn, 7, t)
+                        sheet.write(rn, 8, dest_word['orig'])
+                        sheet.write(rn, 9, dest_word['corr'])
+                        rn += 1
+
+    wb.close()
+    return send_file('/tmp/export.xlsx', as_attachment=True, cache_timeout=0)
 
 
 if __name__ == '__main__':
