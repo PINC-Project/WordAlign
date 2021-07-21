@@ -261,8 +261,56 @@
                 </div>
             </div>
         {% endfor %}
+
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="heading_tools">
+                <button class="accordion-button collapsed" data-bs-toggle="collapse"
+                        data-bs-target="#collapse_tools" aria-expanded="false"
+                        aria-controls="collapse_tools">
+                    Tools
+                </button>
+            </h2>
+            <div class="accordion-collapse collapse" id="collapse_tools" data-bs-parent="#accordionMain"
+                 aria-labelledby="heading_tools">
+                <div class="accordion-body">
+                    <div class="card-body">
+                        <form action="/merge/{{ file.name }}" class="row g-3">
+                            <div class="col-auto">
+                                <label class="form-label">A</label>
+                                <input class="form-control" type="number" name="a" value="1">
+                            </div>
+                            <div class="col-auto">
+                                <label class="form-label">B</label>
+                                <input class="form-control" type="number" name="b" value="2">
+                            </div>
+                            <div class="col-auto">
+                                <input class="btn btn-success" type="submit" value="Merge"
+                                       onclick="return confirm('Are you sure?')">
+                            </div>
+                        </form>
+                        <form action="/split/{{ file.name }}" class="row g-3 mt-2">
+                            <div class="col-auto">
+                                <label class="form-label">Fragment</label>
+                                <input class="form-control" type="number" name="phrase" value="1">
+                            </div>
+                            <div class="col-auto">
+                                <label class="form-label">Split after word (from lang)</label>
+                                <input class="form-control" type="number" name="word_from" value="3">
+                            </div>
+                            <div class="col-auto">
+                                <label class="form-label">Split after word (to lang)</label>
+                                <input class="form-control" type="number" name="word_to" value="3">
+                            </div>
+                            <div class="col-auto">
+                                <input class="btn btn-success" type="submit" value="Split"
+                                       onclick="return confirm('Are you sure?')">
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-
 </body>
 </html>

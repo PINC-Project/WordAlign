@@ -21,6 +21,7 @@ WORKDIR /app
 ADD static ./static
 ADD templates ./templates
 ADD *.py ./
+ADD times.json ./
 
 EXPOSE 80
 
