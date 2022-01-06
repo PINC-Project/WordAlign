@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-docker save word-align | ssh guest@korzinek.com docker load
+docker save word-align | ssh <ENTER_SERVER_HERE> docker load
