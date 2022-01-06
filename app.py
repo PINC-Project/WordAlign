@@ -194,14 +194,15 @@ def export():
     sheet.write(0, 3, 'TT', fmt_head)
     sheet.write(0, 4, 'ST word num', fmt_head)
     sheet.write(0, 5, 'ST word', fmt_head)
-    sheet.write(0, 6, 'ST status', fmt_head)
-    sheet.write(0, 7, 'ST onset', fmt_head)
-    sheet.write(0, 8, 'ST offset', fmt_head)
-    sheet.write(0, 9, 'TT word num', fmt_head)
-    sheet.write(0, 10, 'TT word ', fmt_head)
-    sheet.write(0, 11, 'TT status', fmt_head)
-    sheet.write(0, 12, 'TT onset', fmt_head)
-    sheet.write(0, 13, 'TT offset', fmt_head)
+    sheet.write(0, 6, 'Lemma', fmt_head)
+    sheet.write(0, 7, 'ST status', fmt_head)
+    sheet.write(0, 8, 'ST onset', fmt_head)
+    sheet.write(0, 9, 'ST offset', fmt_head)
+    sheet.write(0, 10, 'TT word num', fmt_head)
+    sheet.write(0, 11, 'TT word ', fmt_head)
+    sheet.write(0, 12, 'TT status', fmt_head)
+    sheet.write(0, 13, 'TT onset', fmt_head)
+    sheet.write(0, 14, 'TT offset', fmt_head)
 
     rn = 1
     for file in sorted(mongo.db.files.find({}), key=lambda x: x['name']):
@@ -255,14 +256,16 @@ def export():
                         sheet.write(rn, 3, dest_sent)
                         sheet.write(rn, 4, word_num + 1)
                         sheet.write(rn, 5, word['orig'])
-                        sheet.write(rn, 6, word['corr'])
-                        sheet.write(rn, 7, src_time[src_time_pos]['s'])
-                        sheet.write(rn, 8, src_time[src_time_pos]['s'] + src_time[src_time_pos]['d'])
+                        sheet.write(rn, 6, re.sub('\W', '', word['lemma']))
+                        sheet.write(rn, 7, word['corr'])
+                        sheet.write(rn, 8, src_time[src_time_pos]['s'])
+                        sheet.write(rn, 9, src_time[src_time_pos]['s'] + src_time[src_time_pos]['d'])
                         rn += 1
                     else:
 
                         sheet.write(rn, 5, word['orig'])
-                        sheet.write(rn, 6, word['corr'])
+                        sheet.write(rn, 6, re.sub('\W', '', word['lemma']))
+                        sheet.write(rn, 7, word['corr'])
 
                         for t in to:
                             dest_word = sent['words'][dest][t]
@@ -271,19 +274,92 @@ def export():
                             sheet.write(rn, 2, src_sent)
                             sheet.write(rn, 3, dest_sent)
                             sheet.write(rn, 4, word_num + 1)
-                            sheet.write(rn, 7, src_time[src_time_pos]['s'])
-                            sheet.write(rn, 8, src_time[src_time_pos]['s'] + src_time[src_time_pos]['d'])
-                            sheet.write(rn, 9, t + 1)
-                            sheet.write(rn, 10, dest_word['orig'])
-                            sheet.write(rn, 11, dest_word['corr'])
+                            sheet.write(rn, 8, src_time[src_time_pos]['s'])
+                            sheet.write(rn, 9, src_time[src_time_pos]['s'] + src_time[src_time_pos]['d'])
+                            sheet.write(rn, 10, t + 1)
+                            sheet.write(rn, 11, dest_word['orig'])
+                            sheet.write(rn, 12, dest_word['corr'])
                             if t in dest_time_cache:
                                 dest_time_pos = dest_time_cache[t]
-                                sheet.write(rn, 12, dest_time[dest_time_pos]['s'])
-                                sheet.write(rn, 13, dest_time[dest_time_pos]['s'] + dest_time[dest_time_pos]['d'])
+                                sheet.write(rn, 13, dest_time[dest_time_pos]['s'])
+                                sheet.write(rn, 14, dest_time[dest_time_pos]['s'] + dest_time[dest_time_pos]['d'])
                             rn += 1
 
     wb.close()
     return send_file('/tmp/export.xlsx', as_attachment=True, cache_timeout=0)
+
+
+@application.route('/exportsent')
+def export_sent():
+    times = None
+    if Path('times.json').exists():
+        with open('times.json') as f:
+            times = json.load(f)
+
+    wb = xlsxwriter.Workbook('/tmp/export_sent.xlsx')
+    fmt_head = wb.add_format()
+    fmt_head.set_bold()
+    fmt_head.set_align('center')
+    sheet = wb.add_worksheet()
+    sheet.write(0, 0, 'File name', fmt_head)
+    sheet.write(0, 1, 'Sent num', fmt_head)
+    sheet.write(0, 2, 'ST', fmt_head)
+    sheet.write(0, 3, 'ST onset', fmt_head)
+    sheet.write(0, 4, 'ST offset', fmt_head)
+    sheet.write(0, 5, 'TT', fmt_head)
+    sheet.write(0, 6, 'TT onset', fmt_head)
+    sheet.write(0, 7, 'TT offset', fmt_head)
+
+    rn = 1
+    for file in sorted(mongo.db.files.find({}), key=lambda x: x['name']):
+        src = file['direction'][0]
+        dest = file['direction'][1]
+
+        src_time = times[file['name'] + '_' + src]
+        dest_time = times[file['name'] + '_' + dest]
+
+        src_time_pos = -1
+        dest_time_pos = -1
+
+        for sent_num, sent in enumerate(file['phrases']):
+            src_sent = ' '.join([x['orig'] for x in sent['words'][src]])
+            dest_sent = ' '.join([x['orig'] for x in sent['words'][dest]])
+
+            src_time_cache = {}
+            for word_num, word in enumerate(sent['words'][src]):
+                cmp_text = re.sub(r'\W', '', word['orig'].lower())
+                for x in range(src_time_pos + 1, len(src_time)):
+                    if re.sub(r'\W', '', src_time[x]['t'].lower()) == cmp_text:
+                        src_time_pos = x
+                        src_time_cache[word_num] = src_time_pos
+                        break
+
+            dest_time_cache = {}
+            for word_num, word in enumerate(sent['words'][dest]):
+                cmp_text = re.sub(r'\W', '', word['orig'].lower())
+                for x in range(dest_time_pos + 1, len(dest_time)):
+                    if re.sub(r'\W', '', dest_time[x]['t'].lower()) == cmp_text:
+                        dest_time_pos = x
+                        dest_time_cache[word_num] = dest_time_pos
+                        break
+
+            sheet.write(rn, 0, file['name'])
+            sheet.write(rn, 1, sent_num + 1)
+            sheet.write(rn, 2, src_sent)
+            if len(src_time_cache) > 0:
+                src_time_pos = list(src_time_cache.values())[0]
+                sheet.write(rn, 3, src_time[src_time_pos]['s'])
+                sheet.write(rn, 4, src_time[src_time_pos]['s'] + src_time[src_time_pos]['d'])
+            sheet.write(rn, 5, dest_sent)
+            if len(dest_time_cache) > 0:
+                dest_time_pos = list(dest_time_cache.values())[0]
+                sheet.write(rn, 6, dest_time[dest_time_pos]['s'])
+                sheet.write(rn, 7, dest_time[dest_time_pos]['s'] + dest_time[dest_time_pos]['d'])
+
+            rn += 1
+
+    wb.close()
+    return send_file('/tmp/export_sent.xlsx', as_attachment=True, cache_timeout=0)
 
 
 if __name__ == '__main__':
